@@ -1,0 +1,71 @@
+#!/bin/csh
+
+# PURPOSE of script: to automate prepping your systems for protein-protein system
+# contains variables of the receptor and ligand to make things easier when changing systems
+# remember to chmod u+x all_prep.in to be able to execute in the terminal --> ./all_prep.in > all_prep.in.log
+
+# receptor
+set REC = YP_W199A
+
+# ligand
+set LIG = smad7
+
+##########################################################
+
+# These are commands for whne you need to parameterize your ligand, which I'm not doing here so they're commented out
+
+#antechamber -i AO3.mol2 -fi mol2 -o AO3_new.pdb -fo pdb
+##3. Make prep files using antechamber: 
+#antechamber -i AO3.mol2 -fi mol2 -o AO3.ante.prep -fo prepi
+##4. Perform your parameter check, this will generate a frcmod file which contains any #bond lengths, angles, or torsions which aren't specified #by the generalized amber #forcefield (GAFF).
+#parmchk2 -i AO3.ante.prep -f prepi -o AO3.ante.frcmod
+
+##########################################################
+
+
+tleap -f - << EOF
+
+# 
+#	${REC}-allosamidin LEaP Script COMPLEX
+#
+set default PBradii mbondi2             						
+source leaprc.protein.ff14SB
+source leaprc.water.tip3p
+source leaprc.gaff2
+loadamberparams frcmod.ionsjc_tip3p 	
+
+#commented out bc 'ligand' is also protein, so antechamber etc. not required to parameterize 
+#loadamberparams AO3.ante.frcmod							
+#loadamberprep AO3.ante.prep 	
+
+# load ligand							
+LIG = loadpdb ${LIG}.pdb
+
+# Load the Receptor
+REC = loadpdb YP.pdb
+
+# Disulfide bonds, this protein doesn't have them so they're commented out
+# remember to change CYS -> CYX if generating specific DSBs
+#bond REC.20.SG REC.67.SG
+#bond REC.50.SG REC.57.SG
+#bond REC.160.SG REC.189.SG
+
+# Combine Receptor with ligands
+COM = combine {REC LIG}
+
+# make prmtop and incprd for gas complex, receptor and ligand, for later use if using MM/PBSA 
+saveamberparm COM ${REC}.${LIG}.com.gas.leap.prmtop ${REC}.${LIG}.com.gas.leap.inpcrd
+saveamberparm LIG ${LIG}.lig.gas.leap.prmtop ${LIG}.lig.gas.leap.inpcrd	
+saveamberparm REC ${REC}.rec.gas.leap.prmtop ${REC}.rec.gas.leap.inpcrd
+savepdb REC ${REC}.rec.gas.leap.pdb 
+savepdb LIG ${LIG}.lig.gas.leap.pdb 	
+
+addIons2 COM Na+ 0											# Add our ions to balance system
+solvateOct COM TIP3PBOX 10.0								# Add water around the system
+saveamberparm COM ${REC}.${LIG}.com.wat.leap.prmtop ${REC}.${LIG}.com.wat.leap.inpcrd 
+charge COM 													# Check our charge at the end. SHOULD BE #0.00 
+savepdb COM ${REC}.${LIG}.com.wat.leap.pdb 					# Save a PDB to look at to doublecheck the #structure
+
+quit
+
+EOF
