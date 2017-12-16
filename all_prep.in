@@ -61,6 +61,7 @@ savepdb REC ${REC}.rec.gas.leap.pdb
 savepdb LIG ${LIG}.lig.gas.leap.pdb 	
 
 addIons2 COM Na+ 0											# Add our ions to balance system
+addIons2 COM Cl- 0                      # Add our ions to balance system
 solvateOct COM TIP3PBOX 10.0								# Add water around the system
 saveamberparm COM ${REC}.${LIG}.com.wat.leap.prmtop ${REC}.${LIG}.com.wat.leap.inpcrd 
 charge COM 													# Check our charge at the end. SHOULD BE #0.00 
