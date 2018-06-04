@@ -1,0 +1,76 @@
+#!/bin/bash
+#
+# This script file generates an average structure of loaded 
+# trajs and outputs:
+# 1. RMSD file aligned along CA values
+# 2. average structure of only CA atoms
+# 3. frame with closest RMSD @ CA to avg. structure 
+#
+# TO RUN FILE: 
+# 1. In terminal: chmod u+x run.avg_struc
+# 2. In terminal: ./run.avg_struc > run.avg_struc.log
+#########################################
+
+# load variables
+#REC=STXBP4
+#t=1us
+ff=n
+
+# stuff within EOF loads into cpptraj
+cpptraj << EOF
+
+# load prmtop 
+parm norre.stripped_1.rre.rev_${ff}.com.wat.leap.prmtop
+
+# load traj files
+trajin stripped.06-07_prod_revonly_${ff}_1.wat.nc 
+trajin stripped.06-07_prod_revonly_${ff}_2.wat.nc
+trajin stripped.06-07_prod_revonly_${ff}_3.wat.nc
+trajin stripped.06-07_prod_revonly_${ff}_4.wat.nc
+trajin stripped.06-07_prod_revonly_${ff}_5.wat.nc
+
+# align all CA atoms to first frame
+rms first @CA
+
+# output average pdb
+average average.pdb PDB @CA 
+
+# average coordinates only CA
+average crdset average_structure @CA
+run 
+
+# output RMSD ref to avg_structure
+rms ref average_structure @CA out test_avg.dat
+
+run
+quit
+
+
+EOF
+
+####################
+
+# print out the frame that is the smallest RMSD 
+tail -n+3 test_avg.dat | awk 'NR == 1 || $2 < min {line = $0; min = $2}END{print line}' 
+
+# make that into a variable
+number=`tail -n+3 test_avg.dat | awk 'NR == 1 || $2 < min {line = $0; min = $2}END{print line}' | awk '{print $1}'`
+
+echo $number
+
+####################
+
+cpptraj << EOF
+
+parm norre.stripped_1.rre.rev_${ff}.com.wat.leap.prmtop
+trajin stripped.06-07_prod_revonly_${ff}_1.wat.nc 
+trajin stripped.06-07_prod_revonly_${ff}_2.wat.nc
+trajin stripped.06-07_prod_revonly_${ff}_3.wat.nc
+trajin stripped.06-07_prod_revonly_${ff}_4.wat.nc
+trajin stripped.06-07_prod_revonly_${ff}_5.wat.nc
+
+# ouput the frame with lowest RMSD to avg structure
+outtraj frame_closest_avg_${number}_${REC}.pdb onlyframes ${number}
+run 
+quit
+EOF
