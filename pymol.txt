@@ -1,0 +1,10 @@
+# to run type in pymol command line:
+# @/path/to/folder/pymol.txt
+
+set opaque_background, off
+util.ray_shadows('none') #render shadows none (not command)
+set ray_texture, 1 #render texture matte 1 (not command)
+set cartoon_fancy_helices, 1
+set ray_trace_mode=1
+ray 2400, 2400
+png /path/to/folder/filename.png, dpi=1000
